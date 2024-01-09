@@ -2,7 +2,9 @@ import { Movie } from "@/typings"
 import Image from "next/image"
 
 interface Props {
-    movie: Movie
+    // When using firebase 
+    // movie: Movie | DocumentData 
+    movie: Movie 
 }
 
 function Thumbnail({ movie }: Props) {
@@ -17,7 +19,7 @@ function Thumbnail({ movie }: Props) {
         fill
         alt="movie"
         priority={true}
-        sizes=""
+        sizes="(max-width: 768px) min-width: 260px, min-width: 180px "
       />
     </div>
   )
