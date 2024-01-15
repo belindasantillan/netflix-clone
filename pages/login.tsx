@@ -1,3 +1,4 @@
+import useAuth from "@/hooks/useAuth";
 import Head from "next/head";
 import Image from "next/image";
 import { useState } from "react";
@@ -10,6 +11,7 @@ interface Inputs {
 
 function Login() {
   const [login, setLogin] = useState(false);
+  const {signIn, signUp} = useAuth()
 
   const {
     register,
@@ -19,9 +21,9 @@ function Login() {
 
   const onSubmit: SubmitHandler<Inputs> = async ({email, password}) => {
     if (login) {
-      // await signIn(email,password)
+      await signIn(email,password)
     } else {
-      // await signUp(email, password)
+      await signUp(email, password)
     }
   };
 
