@@ -1,29 +1,36 @@
-import { Inter } from 'next/font/google'
-import Header from '../components/Header'
-import Banner from '@/components/Banner'
-import requests from '@/utils/requests'
-import { Movie } from '@/typings'
-import Row from '@/components/Row'
-import useAuth from '@/hooks/useAuth'
-import { useRecoilValue } from 'recoil'
-import { modalState } from '@/atoms/modalAtom'
-import Modal from '@/components/Modal'
+import { Inter } from "next/font/google";
+import Header from "../components/Header";
+import Banner from "@/components/Banner";
+import requests from "@/utils/requests";
+import { Movie } from "@/typings";
+import Row from "@/components/Row";
+import useAuth from "@/hooks/useAuth";
+import { useRecoilValue } from "recoil";
+import { modalState } from "@/atoms/modalAtom";
+import Modal from "@/components/Modal";
+import Plans from "@/components/Plans";
+import { Product, getProducts } from "@stripe/firestore-stripe-payments";
+import payments from "@/lib/stripe";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/firebase";
+import useSubscription from "@/hooks/useSubscription";
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ["latin"] });
 
 interface Props {
-  netflixOriginals: Movie[]
-  trendingNow: Movie[]
-  topRated: Movie[]
-  actionMovies: Movie[]
-  comedyMovies: Movie[]
-  horrorMovies: Movie[]
-  romanceMovies: Movie[]
-  documentaries: Movie[]
+  netflixOriginals: Movie[];
+  trendingNow: Movie[];
+  topRated: Movie[];
+  actionMovies: Movie[];
+  comedyMovies: Movie[];
+  horrorMovies: Movie[];
+  romanceMovies: Movie[];
+  documentaries: Movie[];
+  products: Product[];
 }
 
-export default function Home({ 
-  netflixOriginals, 
+export default function Home({
+  netflixOriginals,
   actionMovies,
   comedyMovies,
   documentaries,
@@ -31,14 +38,23 @@ export default function Home({
   romanceMovies,
   topRated,
   trendingNow,
-  }: Props) {
-    const { loading } =useAuth()
-    const showModal = useRecoilValue(modalState)
+  products,
+}: Props) {
+  const { loading, user } = useAuth();
+  const showModal = useRecoilValue(modalState);
+  const subscription = true;
+  // const subscription = useSubscription(user);
 
-    if (loading) return null
+  if (loading || subscription === null) return null;
+
+  if (!subscription) return <Plans products={products} />;
 
   return (
-    <div className="relative h-screen bg-gradient-to-b lg:h-[140vh]">
+    <div
+      className={`relative h-screen bg-gradient-to-b lg:h-[140vh] ${
+        showModal && `!h-screen overflow-hidden`
+      }`}
+    >
       <Header />
       <main className="relative pl-4 pb-24 lg:space-y-24 lg:pl-16">
         <Banner netflixOriginals={netflixOriginals} />
@@ -55,42 +71,63 @@ export default function Home({
         {showModal && <Modal />}
       </main>
     </div>
-  )
+  );
 }
 
 export const getServerSideProps = async () => {
+  let products: Product[] = [];
+  await getDocs(collection(db, "products"))
+    .then((querySnapshot) => {
+      products = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Product[];
+    })
+    .catch((error) => console.log(error));
+
+  // Only get active products
+  const filteredProducts = products.filter(
+    (product) => product.active === true
+  );
+
+  // const products = await getProducts(payments, {
+  //   includePrices: true,
+  //   activeOnly: true,
+  // })
+  //   .then((res) => res)
+  //   .catch((error) => console.log(error.message));
 
   const [
-      netflixOriginals,
-      trendingNow,
-      topRated,
-      actionMovies,
-      comedyMovies,
-      horrorMovies,
-      romanceMovies,
-      documentaries,
-    ] = await Promise.all([
-      fetch(requests.fetchNetflixOriginals).then((res) => res.json()),
-      fetch(requests.fetchTrending).then((res) => res.json()),
-      fetch(requests.fetchTopRated).then((res) => res.json()),
-      fetch(requests.fetchActionMovies).then((res) => res.json()),
-      fetch(requests.fetchComedyMovies).then((res) => res.json()),
-      fetch(requests.fetchHorrorMovies).then((res) => res.json()),
-      fetch(requests.fetchRomanceMovies).then((res) => res.json()),
-      fetch(requests.fetchDocumentaries).then((res) => res.json()),
-    ])
+    netflixOriginals,
+    trendingNow,
+    topRated,
+    actionMovies,
+    comedyMovies,
+    horrorMovies,
+    romanceMovies,
+    documentaries,
+  ] = await Promise.all([
+    fetch(requests.fetchNetflixOriginals).then((res) => res.json()),
+    fetch(requests.fetchTrending).then((res) => res.json()),
+    fetch(requests.fetchTopRated).then((res) => res.json()),
+    fetch(requests.fetchActionMovies).then((res) => res.json()),
+    fetch(requests.fetchComedyMovies).then((res) => res.json()),
+    fetch(requests.fetchHorrorMovies).then((res) => res.json()),
+    fetch(requests.fetchRomanceMovies).then((res) => res.json()),
+    fetch(requests.fetchDocumentaries).then((res) => res.json()),
+  ]);
 
-
-    return {
-      props: {
-        netflixOriginals: netflixOriginals.results,
-        trendingNow: trendingNow.results,
-        topRated: topRated.results,
-        actionMovies: actionMovies.results,
-        comedyMovies: comedyMovies.results,
-        horrorMovies: horrorMovies.results,
-        romanceMovies: romanceMovies.results,
-        documentaries: documentaries.results,
-      },
-    }
-}
+  return {
+    props: {
+      netflixOriginals: netflixOriginals.results,
+      trendingNow: trendingNow.results,
+      topRated: topRated.results,
+      actionMovies: actionMovies.results,
+      comedyMovies: comedyMovies.results,
+      horrorMovies: horrorMovies.results,
+      romanceMovies: romanceMovies.results,
+      documentaries: documentaries.results,
+      products,
+    },
+  };
+};
