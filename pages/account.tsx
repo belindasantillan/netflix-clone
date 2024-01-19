@@ -26,9 +26,10 @@ function Account({ products }: Props) {
         <Link href="/">
           <img
             src="https://rb.gy/ulxxee"
+            alt=""
+            className="cursor-pointer object-contain"
             width={120}
             height={120}
-            className="cursor-pointer object-contain"
           />
         </Link>
         <Link href="/account">
